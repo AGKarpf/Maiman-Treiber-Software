@@ -10,9 +10,9 @@ plus hardwareunabhängige Laserketten-Logik, Mock-Geräte und PyQt6-Widgets.
 ## Installation
 
 ```bash
-pip install "maiman-drivers @ git+https://github.com/GITHUB_USER_PLACEHOLDER/Maiman-Treiber-Software.git"
+pip install "maiman-drivers @ git+https://github.com/AGKarpf/Maiman-Treiber-Software.git"
 # mit GUI-Widgets (PyQt6):
-pip install "maiman-drivers[gui] @ git+https://github.com/GITHUB_USER_PLACEHOLDER/Maiman-Treiber-Software.git"
+pip install "maiman-drivers[gui] @ git+https://github.com/AGKarpf/Maiman-Treiber-Software.git"
 ```
 
 Für die Entwicklung im ausgecheckten Repo: `pip install -e .[gui]`
