@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "maiman-drivers"
+dynamic = ["version"]
+description = "Serial drivers, laser-chain logic and PyQt6 widgets for Maiman SF6015 / SF8150-T laser diode drivers."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Christian Stock" }]
+dependencies = ["pyserial>=3.5,<4"]
+
+[project.optional-dependencies]
+gui = ["PyQt6>=6.5,<7"]
+
+[tool.setuptools]
+packages = ["maiman_drivers"]
+
+[tool.setuptools.dynamic]
+version = { attr = "maiman_drivers.__version__" }
