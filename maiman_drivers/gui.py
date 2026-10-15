@@ -1,7 +1,7 @@
 """PyQt6 widgets for ordered Maiman laser chains.
 Fixed TEC stages have an output switch and temperature/current telemetry.
 DC stages add current adjustment. Adjustable TEC stages combine a current
-control, serial/port identification, current limit and 25 °C TEC telemetry.
+control, serial/port identification, current limit and TEC setpoint/telemetry.
 LaserChainWidget enforces seed-before-pump and reverse shutdown dependencies."""
 
 from __future__ import annotations
@@ -82,8 +82,10 @@ class TecStageWidget(LaserStageWidget):
 
     def _build_layout(self) -> None:
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel(
-            f"Diode current (fixed): {self.stage.diode_current_a:.3f} A"))
+        text = f"Diode current (fixed): {self.stage.diode_current_a:.3f} A"
+        if self.stage.tec_temperature_c is not None:
+            text += f"  |  TEC target: {self.stage.tec_temperature_c:g} °C"
+        layout.addWidget(QLabel(text))
         self.tec_label = QLabel("TEC: -")
         layout.addWidget(self.tec_label)
         layout.addWidget(self.button)
@@ -170,7 +172,8 @@ class AdjustableTecStageWidget(DcStageWidget):
         self.layout().insertWidget(0, QLabel(
             f"Serial: {self.stage.driver.serial_number}  |  "
             f"Port: {self.stage.driver.port_name}\n"
-            f"Maximum current: {self.stage.current_max_a:g} A  |  TEC target: 25 °C"))
+            f"Maximum current: {self.stage.current_max_a:g} A  |  "
+            f"TEC target: {self.stage.tec_temperature_c:g} °C"))
         self.tec_label = QLabel("TEC: --")
         self.layout().addWidget(self.tec_label)
 

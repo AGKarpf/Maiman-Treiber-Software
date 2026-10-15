@@ -27,4 +27,4 @@ __all__ = [
     # Simulation
     "MockSF6015", "MockSF8150T", "FakeMaimanSerial",
 ]
-__version__ = "1.2.0"
+__version__ = "1.3.0"

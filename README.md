@@ -46,6 +46,12 @@ with SF8150T("COM5", expected_serial=0x1379) as drv:   # Seriennummer optional
 `expected_serial` (int oder Hex-String) prüft die Geräteidentität; bei
 Abweichung wird die Verbindung geschlossen und `SerialNumberMismatch` geworfen.
 
+Die TEC-Solltemperatur des SF8150-T ist auf **15–40 °C** begrenzt (Datenblatt
+„Temperature change range“); `set_tec_temperature` lehnt andere Werte mit
+`ValueError` ab, ohne einen Befehl zu senden. TEC-Stufen übernehmen den Sollwert
+über `tec_temperature_c` (z. B. `TecLaserStage("Seed", drv, 0.3, tec_temperature_c=17)`);
+`AdjustableTecLaserStage` nutzt standardmäßig 25 °C.
+
 Laserketten erzwingen die Einschaltreihenfolge (Stufe *n* nur, wenn Stufe *n-1*
 läuft) und die TEC-Abhängigkeit:
 

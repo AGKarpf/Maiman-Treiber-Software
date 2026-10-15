@@ -25,7 +25,7 @@ import warnings
 from maiman_drivers import SerialNumberMismatch
 from maiman_drivers.mock import MockSF6015, MockSF8150T
 from maiman_drivers.laser import (
-    TecLaserStage, DcLaserStage, LaserChain,
+    TecLaserStage, DcLaserStage, AdjustableTecLaserStage, LaserChain,
     ChainDependencyError, TecNotRunningError,
 )
 
@@ -192,6 +192,40 @@ def test_seriennummer() -> None:
               any(issubclass(x.category, UserWarning) for x in w))
 
 
+def test_tec_solltemperatur() -> None:
+    print("\n== TEC-Solltemperatur (15..40 C) ==")
+    drv = MockSF8150T("MOCK-TEMP", serial_number=0x3001)
+    stage = TecLaserStage("Seed 17 C", drv, diode_current_a=0.1, tec_temperature_c=17)
+    stage.initialize()
+    check("TecLaserStage setzt 17 C", abs(drv.get_tec_temperature_setpoint() - 17.0) < 1e-9)
+    check("TEC laeuft nach initialize", stage.tec_running())
+
+    plain = MockSF8150T("MOCK-TEMP2", serial_number=0x3002)
+    TecLaserStage("ohne Angabe", plain, diode_current_a=0.1).initialize()
+    check("ohne tec_temperature_c bleibt der Sollwert unveraendert (25 C)",
+          abs(plain.get_tec_temperature_setpoint() - 25.0) < 1e-9)
+
+    adj = MockSF8150T("MOCK-TEMP3", serial_number=0x3003)
+    adj_stage = AdjustableTecLaserStage("adjustable", adj, 0.0)
+    adj_stage.initialize()
+    check("AdjustableTecLaserStage Standard 25 C",
+          abs(adj.get_tec_temperature_setpoint() - 25.0) < 1e-9)
+    adj2 = MockSF8150T("MOCK-TEMP4", serial_number=0x3004)
+    AdjustableTecLaserStage("adjustable 17", adj2, 0.0, tec_temperature_c=17.5).initialize()
+    check("AdjustableTecLaserStage 17.5 C",
+          abs(adj2.get_tec_temperature_setpoint() - 17.5) < 1e-9)
+
+    for bad in (14.99, 40.01, float("nan")):
+        expect_raises(f"Stufe mit {bad} C -> ValueError", ValueError,
+                      lambda bad=bad: TecLaserStage("x", MockSF8150T("M"), 0.1,
+                                                    tec_temperature_c=bad))
+    before = drv.get_tec_temperature_setpoint()
+    expect_raises("set_tec_temperature(10) -> ValueError", ValueError,
+                  lambda: drv.set_tec_temperature(10))
+    check("ungueltiger Wert wird nicht gesendet",
+          drv.get_tec_temperature_setpoint() == before)
+
+
 def main() -> None:
     print("Baue zwei Laserketten (ohne Hardware, Mock-Treiber) ...")
     chain1 = build_chain_1()
@@ -205,6 +239,7 @@ def main() -> None:
     test_lange_kette(chain2)
     test_dc_stromsetzung(chain2)
     test_seriennummer()
+    test_tec_solltemperatur()
 
     print(f"\nAlle {_passed} Pruefungen bestanden.")
 

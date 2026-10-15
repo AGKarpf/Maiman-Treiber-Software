@@ -3,12 +3,13 @@ Enable seed before pump/amplifiers; disable stages in reverse order. A stage
 requires its predecessor ON before enabling and its successor OFF before
 disabling, so enabled stages always form a contiguous prefix.
 TecLaserStage has a fixed current and requires a running TEC before enabling.
-AdjustableTecLaserStage adds bounded current adjustment and a 25 °C setpoint.
+TEC stages can set the TEC setpoint (tec_temperature_c); AdjustableTecLaserStage
+adds bounded current adjustment and defaults to a 25 °C setpoint.
 DcLaserStage has adjustable current and no TEC guard. This module contains no Qt."""
 
 from __future__ import annotations
 
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 
 
 class LaserError(Exception):
@@ -56,17 +57,26 @@ class LaserStage:
 
 class TecLaserStage(LaserStage):
     """Stage with a continuously running TEC and a fixed diode current.
-    initialize prepares diode_current_a; turn_on/turn_off switch the diode."""
+    initialize prepares diode_current_a and, if tec_temperature_c is given, the
+    TEC setpoint (validated against the driver range); turn_on/turn_off switch
+    the diode."""
 
-    def __init__(self, name: str, driver, diode_current_a: float) -> None:
+    def __init__(self, name: str, driver, diode_current_a: float,
+                 tec_temperature_c: Optional[float] = None) -> None:
         super().__init__(name, driver)
         self.diode_current_a = diode_current_a
+        if tec_temperature_c is not None:
+            check = getattr(driver, "check_tec_temperature", float)
+            tec_temperature_c = check(tec_temperature_c)
+        self.tec_temperature_c = tec_temperature_c
 
     def initialize(self) -> None:
         d = self.driver
         # Keep TEC enabled continuously.
         d.tec_set_source(internal=True)
         d.tec_set_enable_source(internal=True)
+        if self.tec_temperature_c is not None:
+            d.set_tec_temperature(self.tec_temperature_c)
         d.tec_start()
         # Prepare diode current without enabling output.
         d.set_current_source(internal=True)
@@ -95,15 +105,18 @@ class TecLaserStage(LaserStage):
 
 
 class AdjustableTecLaserStage(TecLaserStage):
-    """SF8 stage with adjustable diode current and a fixed 25 °C TEC setpoint.
+    """SF8 stage with adjustable diode current and a TEC setpoint (default 25 °C).
 
     Current is bounded by the configured software limit. Enabling the diode
     requires a running TEC and the normal chain dependency checks.
     """
 
+    def __init__(self, name: str, driver, diode_current_a: float,
+                 tec_temperature_c: float = 25.0) -> None:
+        super().__init__(name, driver, diode_current_a, tec_temperature_c)
+
     def initialize(self) -> None:
         self.driver.stop()
-        self.driver.set_tec_temperature(25.0)
         super().initialize()
 
     def set_current(self, amperes: float) -> None:

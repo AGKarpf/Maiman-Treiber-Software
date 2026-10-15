@@ -445,6 +445,9 @@ class SF8150T(MaimanDriver):
     CURRENT_SET_STEP_A = 0.0001   # Current setpoint (0300), 0.1 mA steps
     CURRENT_MEAS_STEP_A = 0.0001  # Measured current (0307), 0.1 mA steps
     CURRENT_MAX_A = 1.5           # SF8150 = 1500 mA
+    # TEC setpoint range ("temperature change range", SF8xxx datasheet)
+    TEC_TEMPERATURE_MIN_C = 15.0
+    TEC_TEMPERATURE_MAX_C = 40.0
 
     # TEC state (parameter 0A1A)
     _P_TEC_STATE = 0x0A1A
@@ -508,8 +511,25 @@ class SF8150T(MaimanDriver):
                      else self._TEC_ENABLE_EXTERNAL)
 
     def set_tec_temperature(self, celsius: float, verify: bool = False) -> None:
-        """Set TEC temperature in °C (0.01 °C resolution)."""
+        """Set TEC temperature in °C (0.01 °C resolution, 15-40 °C).
+        Raises ValueError outside the range without sending a command."""
+        self.check_tec_temperature(celsius)
         self.set_raw(0x0A10, round(celsius * 100), verify=verify)
+
+    @classmethod
+    def check_tec_temperature(cls, celsius: float) -> float:
+        """Return celsius as float if it is a valid TEC setpoint, else raise ValueError."""
+        import math
+        try:
+            value = float(celsius)
+        except (TypeError, ValueError):
+            value = math.nan
+        if not math.isfinite(value) or not (
+                cls.TEC_TEMPERATURE_MIN_C <= value <= cls.TEC_TEMPERATURE_MAX_C):
+            raise ValueError(
+                f"TEC temperature must be between {cls.TEC_TEMPERATURE_MIN_C:g} and "
+                f"{cls.TEC_TEMPERATURE_MAX_C:g} °C (got {celsius!r}).")
+        return value
 
     def set_tec_temperature_limits(self, minimum_c: float,
                                    maximum_c: float) -> None:
